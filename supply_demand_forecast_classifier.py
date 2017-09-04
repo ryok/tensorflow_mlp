@@ -39,8 +39,7 @@ for i in range(m):
 print(ydata)
 
 # Filter for features of interest
-# cols_of_interest = ['bid_price', 'bid', 'offer', 'rate']
-cols_of_interest = ['contract_count_10','contract_count_11','contract_count_14','contract_count_15','contract_count_20','contract_count_21','contract_count_24','contract_count_25','contract_count_30','contract_count_31','contract_face_10','contract_face_11','contract_face_14','contract_face_15','contract_face_20','contract_face_21','contract_face_24','contract_face_25','contract_face_30','contract_face_31','stock_snm_x','zanzon','bid','offer','rate','remaining_years_from','remaining_years_to','simple_yield_1days_from_ope','simple_yield_2days_from_ope','simple_yield_fluctuation_2to1','simple_yield_fluctuation_3to2','amount_sum','bid_price','balance']
+cols_of_interest = ['contract_count_10','contract_count_11','contract_count_14','contract_count_15','contract_count_20','contract_count_21','contract_count_24','contract_count_25','contract_count_30','contract_count_31','contract_face_10','contract_face_11','contract_face_14','contract_face_15','contract_face_20','contract_face_21','contract_face_24','contract_face_25','contract_face_30','contract_face_31','zanzon','bid','simple_yield_1days_from_ope','simple_yield_2days_from_ope','simple_yield_fluctuation_2to1','simple_yield_fluctuation_3to2','amount_sum','balance']
 x_vals = np.array([[x[ix] for ix, feature in enumerate(supply_demand_header) if feature in cols_of_interest] for x in supply_demand_data])
 
 # set for reproducible results
@@ -76,7 +75,7 @@ x_vals_test = np.nan_to_num(normalize_cols(x_vals_test))
 sess = tf.Session()
 
 # Initialize placeholders
-x_data = tf.placeholder(shape=[None, 34], dtype=tf.float32)
+x_data = tf.placeholder(shape=[None, 28], dtype=tf.float32)
 y_target = tf.placeholder(shape=[None, 3], dtype=tf.float32)
 
 
@@ -98,7 +97,7 @@ def logistic(input_layer, multiplication_weight, bias_weight, activation = True)
         
 
 # First logistic layer (7 inputs to 7 hidden nodes)
-A1 = init_variable(shape=[34,60])
+A1 = init_variable(shape=[28,60])
 b1 = init_variable(shape=[60])
 logistic_layer1 = logistic(x_data, A1, b1)
 
@@ -124,11 +123,20 @@ train_step = my_opt.minimize(loss)
 init = tf.global_variables_initializer()
 sess.run(init)
 
+# TensorBoard
+summary_op = tf.summary.merge_all()
+summary_writer = tf.summary.FileWriter('log', graph = sess.graph)
+
 # Actual Prediction
-# prediction = tf.round(final_output)
 prediction = tf.round(tf.nn.sigmoid(final_output))
 predictions_correct = tf.cast(tf.equal(prediction, y_target), tf.float32)
 accuracy = tf.reduce_mean(predictions_correct)
+# with tf.name_scope('accuracy'):
+#   with tf.name_scope('correct_prediction'):
+#     correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
+#   with tf.name_scope('accuracy'):
+#     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+# tf.summary.scalar('accuracy', accuracy)
 
 # TensorBoard
 # logloss = tf.scalar_summary('loss_w_L2', loss)
@@ -156,11 +164,6 @@ for i in range(1500):
     temp_acc_test = sess.run(accuracy, feed_dict={x_data: x_vals_test, y_target: y_vals_test})
     # temp_acc_test = sess.run(accuracy, feed_dict={x_data: x_vals_test, y_target: np.transpose([y_vals_test])})
     test_acc.append(temp_acc_test)
-
-    # accuracy
-    # test_preds = [x[1] for x in sess.run(final_output, feed_dict={x_data: x_vals_test})]
-    # train_preds = [x[1] for x in sess.run(final_output, feed_dict={x_data: x_vals_train})]
-    # print('test_preds = ' + str(train_preds))
 
     if (i+1)%150==0:
         print("step %d, training accuracy %g"%(i, temp_acc_train))

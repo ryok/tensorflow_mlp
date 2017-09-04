@@ -30,6 +30,12 @@ df2 = convert2number(df, 'mapping_4_stock_snm.txt', stock_snm_list_uq)
 df3 = convert2number(df2, 'mapping_4_rate.txt', rate_fluctuation_list_uq)
 df4 = convert2number(df3, 'mapping_4_date.txt', date_list_uq).dropna()
 
+df_up = df4.query("fluctuation_rate = 0")
+df_down = df4.query("fluctuation_rate = 1")
+df_stay = df4.query("fluctuation_rate = 2")
+
+df_stay_sampled = df_stay.sample(n=200, replace=True)
+df_buy = pd.concat([df_up, df_down, df_stay])
 # df4dataset = df
 
 # f = open('mapping_4_stock_snm.txt', 'w')
