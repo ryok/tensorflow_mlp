@@ -46,6 +46,7 @@ print(len(df_sell_up.index))
 print(len(df_sell_down.index))
 print(len(df_sell_stay.index))
 
+# stayのデータをアンダーサンプリングする
 df_buy_stay_sampled = df_buy_stay.sample(n=220, replace=True)
 df_sell_stay_sampled = df_sell_stay.sample(n=220, replace=True)
 # print(len(df_stay_sampled))

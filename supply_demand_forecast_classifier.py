@@ -4,14 +4,13 @@ import csv
 import os
 from tensorflow.python.framework import ops
 import matplotlib.pyplot as plt
-# from sklearn.feature_extraction import DictVectorizer
 import pandas as pd
 
 # reset computational graph
 ops.reset_default_graph()
 
-# read_file = 'input/easy_datasets_buy3.csv'
 read_file = 'dataset_buy_tensorflow.csv'
+# read_file = 'dataset_sell_tensorflow.csv'
 
 if not os.path.exists(read_file):
     print ('can not find csv file...')
@@ -26,10 +25,12 @@ with open(read_file, newline='') as csvfile:
         supply_demand_data.append(row)
 
 supply_demand_data = [[float(x) for x in row] for row in supply_demand_data]
-# df = pd.read_csv("dataset4tensorflow.csv")
-# d = df[["fluctuation_sell_rate"]].to_dict('record')
+
+df_dataset = pd.read_csv("dataset_buy_tensorflow.csv")
+y_vals = np.array(df_dataset['fluctuation_buy_rate'])
+
 # Extract y-target
-y_vals = np.array([x[39] for x in supply_demand_data])
+# y_vals = np.array([x[39] for x in supply_demand_data])
 m = len(y_vals)
 ydata = np.zeros((m, 3))
 for i in range(m):
@@ -39,7 +40,7 @@ for i in range(m):
 print(ydata)
 
 # Filter for features of interest
-cols_of_interest = ['contract_count_10','contract_count_11','contract_count_14','contract_count_15','contract_count_20','contract_count_21','contract_count_24','contract_count_25','contract_count_30','contract_count_31','contract_face_10','contract_face_11','contract_face_14','contract_face_15','contract_face_20','contract_face_21','contract_face_24','contract_face_25','contract_face_30','contract_face_31','zanzon','bid','simple_yield_1days_from_ope','simple_yield_2days_from_ope','simple_yield_fluctuation_2to1','simple_yield_fluctuation_3to2','amount_sum','balance']
+cols_of_interest = ['stock_snm_x','contract_count_10','contract_count_11','contract_count_14','contract_count_15','contract_count_20','contract_count_21','contract_count_24','contract_count_25','contract_count_30','contract_count_31','contract_face_10','contract_face_11','contract_face_14','contract_face_15','contract_face_20','contract_face_21','contract_face_24','contract_face_25','contract_face_30','contract_face_31','zanzon','bid','simple_yield_fluctuation_2to1','simple_yield_fluctuation_3to2','amount_sum','balance']
 x_vals = np.array([[x[ix] for ix, feature in enumerate(supply_demand_header) if feature in cols_of_interest] for x in supply_demand_data])
 
 # set for reproducible results
@@ -75,7 +76,7 @@ x_vals_test = np.nan_to_num(normalize_cols(x_vals_test))
 sess = tf.Session()
 
 # Initialize placeholders
-x_data = tf.placeholder(shape=[None, 28], dtype=tf.float32)
+x_data = tf.placeholder(shape=[None, 27], dtype=tf.float32)
 y_target = tf.placeholder(shape=[None, 3], dtype=tf.float32)
 
 
@@ -97,7 +98,7 @@ def logistic(input_layer, multiplication_weight, bias_weight, activation = True)
         
 
 # First logistic layer (7 inputs to 7 hidden nodes)
-A1 = init_variable(shape=[28,60])
+A1 = init_variable(shape=[27,60])
 b1 = init_variable(shape=[60])
 logistic_layer1 = logistic(x_data, A1, b1)
 
@@ -115,33 +116,28 @@ loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=final_outpu
 # loss = cross_entropy + lambda_2 * L2_sqr
 
 # Declare optimizer
-# my_opt = tf.train.AdamOptimizer(learning_rate = 0.002)
-my_opt = tf.train.GradientDescentOptimizer(0.001)
+my_opt = tf.train.AdamOptimizer(learning_rate = 0.002)
+# my_opt = tf.train.GradientDescentOptimizer(learning_rate = 0.001)
 train_step = my_opt.minimize(loss)
+
+
+
+# Actual Prediction
+prediction = tf.round(tf.nn.sigmoid(final_output))
+# correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
+# accuracy = tf.reduce_mean(correct_prediction)
+
+with tf.name_scope("test") as scope:
+    correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
+    accuracy = tf.reduce_mean(correct_prediction)
+    accuracy_summary = tf.summary.scalar("accuracy", accuracy)
+
+summary_op = tf.summary.merge_all()
+summary_writer = tf.summary.FileWriter('log', graph = sess.graph)
 
 # Initialize variables
 init = tf.global_variables_initializer()
 sess.run(init)
-
-# TensorBoard
-summary_op = tf.summary.merge_all()
-summary_writer = tf.summary.FileWriter('log', graph = sess.graph)
-
-# Actual Prediction
-prediction = tf.round(tf.nn.sigmoid(final_output))
-predictions_correct = tf.cast(tf.equal(prediction, y_target), tf.float32)
-accuracy = tf.reduce_mean(predictions_correct)
-# with tf.name_scope('accuracy'):
-#   with tf.name_scope('correct_prediction'):
-#     correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
-#   with tf.name_scope('accuracy'):
-#     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-# tf.summary.scalar('accuracy', accuracy)
-
-# TensorBoard
-# logloss = tf.scalar_summary('loss_w_L2', loss)
-# logaccu = tf.scalar_summary('accuracy', accuracy)
-# summary_op = tf.merge_summary([logloss, logaccu])
 
 # Training loop
 loss_vec = []
@@ -158,11 +154,13 @@ for i in range(1500):
     temp_loss = sess.run(loss, feed_dict={x_data: rand_x, y_target: rand_y})
     loss_vec.append(temp_loss)
     
-    temp_acc_train = sess.run(accuracy, feed_dict={x_data: x_vals_train, y_target: y_vals_train})
-    # temp_acc_train = sess.run(accuracy, feed_dict={x_data: x_vals_train, y_target: np.transpose([y_vals_train])})
+    train_result = sess.run([summary_op, accuracy], feed_dict={x_data: x_vals_train, y_target: y_vals_train})
+    summary_str = train_result[0]
+    temp_acc_train = train_result[1]
     train_acc.append(temp_acc_train)
+    summary_writer.add_summary(summary_str, i)
+
     temp_acc_test = sess.run(accuracy, feed_dict={x_data: x_vals_test, y_target: y_vals_test})
-    # temp_acc_test = sess.run(accuracy, feed_dict={x_data: x_vals_test, y_target: np.transpose([y_vals_test])})
     test_acc.append(temp_acc_test)
 
     if (i+1)%150==0:
