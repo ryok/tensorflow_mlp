@@ -1,3 +1,0 @@
-stay 0
-down 1
-up 2

@@ -11,7 +11,7 @@ import pandas as pd
 ops.reset_default_graph()
 
 # read_file = 'input/easy_datasets_buy3.csv'
-read_file = 'dataset4tensorflow.csv'
+read_file = 'dataset_buy_tensorflow.csv'
 
 if not os.path.exists(read_file):
     print ('can not find csv file...')
@@ -115,8 +115,8 @@ loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=final_outpu
 # loss = cross_entropy + lambda_2 * L2_sqr
 
 # Declare optimizer
-my_opt = tf.train.AdamOptimizer(learning_rate = 0.002)
-# my_opt = tf.train.GradientDescentOptimizer(0.001)
+# my_opt = tf.train.AdamOptimizer(learning_rate = 0.002)
+my_opt = tf.train.GradientDescentOptimizer(0.001)
 train_step = my_opt.minimize(loss)
 
 # Initialize variables
@@ -148,8 +148,8 @@ loss_vec = []
 train_acc = []
 test_acc = []
 for i in range(1500):
-    # rand_index = np.random.choice(len(x_vals_train), size=batch_size)
-    rand_index = np.random.choice(batch_size, batch_size)
+    rand_index = np.random.choice(len(x_vals_train), size=batch_size)
+    # rand_index = np.random.choice(batch_size, batch_size)
     rand_x = x_vals_train[rand_index]
     # rand_y = np.transpose([y_vals_train[rand_index]])
     rand_y = y_vals_train[rand_index]

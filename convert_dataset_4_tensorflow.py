@@ -26,38 +26,37 @@ def convert2number(df4dataset, file_name, target_list):
     f.close()
     return df4dataset
 
-df2 = convert2number(df, 'mapping_4_stock_snm.txt', stock_snm_list_uq)
-df3 = convert2number(df2, 'mapping_4_rate.txt', rate_fluctuation_list_uq)
-df4 = convert2number(df3, 'mapping_4_date.txt', date_list_uq).dropna()
+df2 = convert2number(df, 'mapping_result_stock_snm.txt', stock_snm_list_uq)
+df3 = convert2number(df2, 'mapping_result_rate.txt', rate_fluctuation_list_uq)
+df4 = convert2number(df3, 'mapping_result_date.txt', date_list_uq).dropna()
 
-df_up = df4.query("fluctuation_rate = 0")
-df_down = df4.query("fluctuation_rate = 1")
-df_stay = df4.query("fluctuation_rate = 2")
+# buy
+df_buy_up = df4.query("fluctuation_buy_rate == 0")
+df_buy_down = df4.query("fluctuation_buy_rate == 1")
+df_buy_stay = df4.query("fluctuation_buy_rate == 2")
+print(len(df_buy_up))
+print(len(df_buy_down))
+print(len(df_buy_stay))
 
-df_stay_sampled = df_stay.sample(n=200, replace=True)
-df_buy = pd.concat([df_up, df_down, df_stay])
-# df4dataset = df
+# buy
+df_sell_up = df4.query("fluctuation_sell_rate == 0")
+df_sell_down = df4.query("fluctuation_sell_rate == 1")
+df_sell_stay = df4.query("fluctuation_sell_rate == 2")
+print(len(df_sell_up.index))
+print(len(df_sell_down.index))
+print(len(df_sell_stay.index))
 
-# f = open('mapping_4_stock_snm.txt', 'w')
-# mapping_4_stock_snm = cl.OrderedDict()
-# num4stock_snm = 0
-# for stock_snm in stock_snm_list_uq:
-#     mapping_4_stock_snm[stock_snm] = num4stock_snm
-#     df4dataset = df4dataset.replace(stock_snm, num4stock_snm)
-#     num4stock_snm+=1
-#     f.write(stock_snm + " " + str(mapping_4_stock_snm[stock_snm]) + "\n")
-# f.close()
+df_buy_stay_sampled = df_buy_stay.sample(n=220, replace=True)
+df_sell_stay_sampled = df_sell_stay.sample(n=220, replace=True)
+# print(len(df_stay_sampled))
 
-# f = open('mapping_4_rate.txt', 'w')
-# mapping_4_rate_fluctuation = cl.OrderedDict()
-# num4rate=0
-# for rate_fluctuation in rate_fluctuation_list_uq:
-#     mapping_4_rate_fluctuation[rate_fluctuation] = num4rate
-#     df4dataset = df4dataset.replace(rate_fluctuation, num4rate)
-#     num4rate+=1
-#     f.write(rate_fluctuation + " " + str(mapping_4_rate_fluctuation[rate_fluctuation]) + "\n")
-# f.close()
+### merge datasets
+df_buy = pd.concat([df_buy_up, df_buy_down, df_buy_stay_sampled])
+df_sell = pd.concat([df_sell_up, df_sell_down, df_sell_stay_sampled])
 
-df4.to_csv('dataset4tensorflow.csv')
+df_buy.to_csv('dataset_buy_tensorflow.csv')
+df_sell.to_csv('dataset_sell_tensorflow.csv')
+print(len(df_buy.index))
+print(len(df_sell.index))
 
 
