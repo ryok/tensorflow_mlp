@@ -132,7 +132,8 @@ prediction = tf.round(tf.nn.sigmoid(final_output))
 # accuracy = tf.reduce_mean(correct_prediction)
 
 with tf.name_scope("test") as scope:
-    correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
+    correct_prediction = tf.cast(tf.equal(tf.argmax(prediction, 1), tf.argmax(y_target, 1), tf.float32) )
+    # correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
     accuracy = tf.reduce_mean(correct_prediction)
     accuracy_summary = tf.summary.scalar("accuracy", accuracy)
     # matrix = tf.confusion_matrix(y_target, prediction)
@@ -176,8 +177,8 @@ for i in range(1500):
 
 # precision recall
 print(prediction)
-# print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
-print('Precision: %.3f' % precision_score(y_vals, prediction))
+print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
+# print('Precision: %.3f' % precision_score(y_vals, prediction))
 
 
 # Plot loss over time
