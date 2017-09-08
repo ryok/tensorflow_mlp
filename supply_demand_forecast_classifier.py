@@ -132,7 +132,7 @@ prediction = tf.round(tf.nn.sigmoid(final_output))
 # accuracy = tf.reduce_mean(correct_prediction)
 
 with tf.name_scope("test") as scope:
-    correct_prediction = tf.cast(tf.equal(tf.argmax(prediction, 1), tf.argmax(y_target, 1), tf.float32) )
+    correct_prediction = tf.cast(tf.equal(tf.argmax(prediction, 1), tf.argmax(y_target, 1)), tf.float32 )
     # correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
     accuracy = tf.reduce_mean(correct_prediction)
     accuracy_summary = tf.summary.scalar("accuracy", accuracy)
@@ -176,9 +176,82 @@ for i in range(1500):
         
 
 # precision recall
-print(prediction)
-print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
+# print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
 # print('Precision: %.3f' % precision_score(y_vals, prediction))
+
+
+'''与えられたネットワークの正解率などを出力する。
+'''
+predictions = tf.argmax(prediction, 1)
+actuals = tf.argmax(y_target, 1)
+
+ones_like_actuals = tf.ones_like(actuals)
+zeros_like_actuals = tf.zeros_like(actuals)
+ones_like_predictions = tf.ones_like(predictions)
+zeros_like_predictions = tf.zeros_like(predictions)
+
+tp_op = tf.reduce_sum(
+    tf.cast(
+        tf.logical_and(
+            tf.equal(actuals, ones_like_actuals),
+            tf.equal(predictions, ones_like_predictions)
+        ),
+        "float"
+    )
+)
+
+tn_op = tf.reduce_sum(
+    tf.cast(
+        tf.logical_and(
+            tf.equal(actuals, zeros_like_actuals),
+            tf.equal(predictions, zeros_like_predictions)
+        ),
+        "float"
+    )
+)
+
+fp_op = tf.reduce_sum(
+    tf.cast(
+        tf.logical_and(
+            tf.equal(actuals, zeros_like_actuals),
+            tf.equal(predictions, ones_like_predictions)
+        ),
+        "float"
+    )
+)
+
+fn_op = tf.reduce_sum(
+    tf.cast(
+        tf.logical_and(
+            tf.equal(actuals, ones_like_actuals),
+            tf.equal(predictions, zeros_like_predictions)
+        ),
+        "float"
+    )
+)
+
+tp, tn, fp, fn = sess.run(
+    [tp_op, tn_op, fp_op, fn_op],
+    feed_dict={x_data: x_vals_test, y_target: y_vals_test}
+)
+
+tpr = float(tp)/(float(tp) + float(fn))
+fpr = float(fp)/(float(tp) + float(fn))
+
+accuracy = (float(tp) + float(tn))/(float(tp) + float(fp) + float(fn) + float(tn))
+
+recall = tpr
+if (float(tp) + float(fp)):
+    precision = float(tp)/(float(tp) + float(fp))
+    f1_score = (2 * (precision * recall)) / (precision + recall)
+else:
+    precision = 0
+    f1_score = 0
+
+print('Precision = ', precision)
+print('Recall = ', recall)
+print('F1 Score = ', f1_score)
+print('Accuracy = ', accuracy)
 
 
 # Plot loss over time
