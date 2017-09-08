@@ -5,6 +5,10 @@ import os
 from tensorflow.python.framework import ops
 import matplotlib.pyplot as plt
 import pandas as pd
+from sklearn.metrics import precision_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import recall_score, f1_score
+
 
 # reset computational graph
 ops.reset_default_graph()
@@ -26,7 +30,7 @@ with open(read_file, newline='') as csvfile:
 
 supply_demand_data = [[float(x) for x in row] for row in supply_demand_data]
 
-df_dataset = pd.read_csv("dataset_buy_tensorflow.csv")
+df_dataset = pd.read_csv(read_file)
 y_vals = np.array(df_dataset['fluctuation_buy_rate'])
 
 # Extract y-target
@@ -131,6 +135,7 @@ with tf.name_scope("test") as scope:
     correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
     accuracy = tf.reduce_mean(correct_prediction)
     accuracy_summary = tf.summary.scalar("accuracy", accuracy)
+    # matrix = tf.confusion_matrix(y_target, prediction)
 
 summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter('log', graph = sess.graph)
@@ -168,7 +173,13 @@ for i in range(1500):
         print("step %d, test accuracy %g"%(i, temp_acc_test))
         print('Loss = ' + str(temp_loss))
         
-        
+
+# precision recall
+print(prediction)
+# print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
+print('Precision: %.3f' % precision_score(y_vals, prediction))
+
+
 # Plot loss over time
 plt.plot(loss_vec, 'k-')
 plt.title('Cross Entropy Loss per Generation')
@@ -184,3 +195,4 @@ plt.xlabel('Generation')
 plt.ylabel('Accuracy')
 plt.legend(loc='lower right')
 plt.show()
+
