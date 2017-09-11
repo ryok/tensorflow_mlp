@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.metrics import precision_score
 from sklearn.metrics import confusion_matrix
-from sklearn.metrics import recall_score, f1_score
+# from sklearn.metrics import recall_score, f1_score
+from sklearn.metrics import classification_report
+import seaborn as sns
 
 
 # reset computational graph
@@ -132,7 +134,7 @@ prediction = tf.round(tf.nn.sigmoid(final_output))
 # accuracy = tf.reduce_mean(correct_prediction)
 
 with tf.name_scope("test") as scope:
-    correct_prediction = tf.cast(tf.equal(tf.argmax(prediction, 1), tf.argmax(y_target, 1), tf.float32) )
+    correct_prediction = tf.cast(tf.equal(tf.argmax(prediction, 1), tf.argmax(y_target, 1)), tf.float32 )
     # correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
     accuracy = tf.reduce_mean(correct_prediction)
     accuracy_summary = tf.summary.scalar("accuracy", accuracy)
@@ -140,6 +142,16 @@ with tf.name_scope("test") as scope:
 
 summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter('log', graph = sess.graph)
+
+
+
+predictions = tf.argmax(prediction, 1)
+actuals = tf.argmax(y_target, 1)
+tf_recall = tf.metrics.recall(actuals, predictions)
+confusion_matrix = tf.confusion_matrix(actuals, predictions)
+# cl_report = classification_report(actuals, predictions)
+
+
 
 # Initialize variables
 init = tf.global_variables_initializer()
@@ -176,10 +188,117 @@ for i in range(1500):
         
 
 # precision recall
-print(prediction)
-print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
+# print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
 # print('Precision: %.3f' % precision_score(y_vals, prediction))
 
+
+'''与えられたネットワークの正解率などを出力する。
+'''
+
+ones_like_actuals = tf.ones_like(actuals)
+zeros_like_actuals = tf.zeros_like(actuals)
+ones_like_predictions = tf.ones_like(predictions)
+zeros_like_predictions = tf.zeros_like(predictions)
+
+tp_op = tf.reduce_sum(
+    tf.cast(
+        tf.logical_and(
+            tf.equal(actuals, ones_like_actuals),
+            tf.equal(predictions, ones_like_predictions)
+        ),
+        "float"
+    )
+)
+
+tn_op = tf.reduce_sum(
+    tf.cast(
+        tf.logical_and(
+            tf.equal(actuals, zeros_like_actuals),
+            tf.equal(predictions, zeros_like_predictions)
+        ),
+        "float"
+    )
+)
+
+fp_op = tf.reduce_sum(
+    tf.cast(
+        tf.logical_and(
+            tf.equal(actuals, zeros_like_actuals),
+            tf.equal(predictions, ones_like_predictions)
+        ),
+        "float"
+    )
+)
+
+fn_op = tf.reduce_sum(
+    tf.cast(
+        tf.logical_and(
+            tf.equal(actuals, ones_like_actuals),
+            tf.equal(predictions, zeros_like_predictions)
+        ),
+        "float"
+    )
+)
+
+tp, tn, fp, fn = sess.run(
+    [tp_op, tn_op, fp_op, fn_op],
+    feed_dict={x_data: x_vals_test, y_target: y_vals_test}
+)
+
+tpr = float(tp)/(float(tp) + float(fn))
+fpr = float(fp)/(float(tp) + float(fn))
+
+accuracy = (float(tp) + float(tn))/(float(tp) + float(fp) + float(fn) + float(tn))
+
+recall = tpr
+if (float(tp) + float(fp)):
+    precision = float(tp)/(float(tp) + float(fp))
+    f1_score = (2 * (precision * recall)) / (precision + recall)
+else:
+    precision = 0
+    f1_score = 0
+
+print('-----')
+print('Precision = ', precision)
+print('Recall = ', recall)
+print('F1 Score = ', f1_score)
+print('Accuracy = ', accuracy)
+
+print('-----')
+# con_matrix = sess.run(,
+#     feed_dict={x_data: x_vals_test, y_target: y_vals_test}
+# )
+print(sess.run(
+    confusion_matrix,
+    feed_dict={x_data: x_vals_test, y_target: y_vals_test})
+    )
+# print(sess.run(
+#     tf_recall,
+#     feed_dict={x_data: x_vals_test, y_target: y_vals_test})
+#     )
+
+ac = sess.run(
+    actuals,
+    feed_dict={x_data: x_vals_test, y_target: y_vals_test})
+pr = sess.run(
+    predictions,
+    feed_dict={x_data: x_vals_test, y_target: y_vals_test})
+
+print(classification_report(ac, pr))
+# print(cl_report)
+
+
+# seaborn.heatmap を使ってプロットする
+# index = list("012")
+# columns = list("012")
+# df = pd.DataFrame(confusion_matrix, index=index, columns=columns)
+
+# fig = plt.figure(figsize = (3,3))
+# sns.heatmap(df, annot=True, square=True, fmt='.0f', cmap="Blues")
+# plt.title('hand_written digit classification')
+# plt.xlabel('ground_truth')
+# plt.ylabel('prediction')
+# fig.savefig("conf_mat.png")
 
 # Plot loss over time
 plt.plot(loss_vec, 'k-')
