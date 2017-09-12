@@ -2,7 +2,7 @@
 
 import pandas as pd
 import collections as cl
-
+import sys
 
 def checkArg():
 
@@ -42,7 +42,8 @@ def generateDataset(type):
         stock_snm_list = df["stock_snm_x"]
         rate_fluctuation_list = df["fluctuation_sell_rate"]
         stock_snm_list_uq = list(set(stock_snm_list))
-        rate_fluctuation_list_uq = list(set(rate_fluctuation_list))
+        # rate_fluctuation_list_uq = list(set(rate_fluctuation_list))
+        rate_fluctuation_list_uq = ["up", "down", "stay"]
         date_list = df["date"]
         date_list_uq = list(set(date_list))
         df2 = convert2number(df, 'mapping_result_stock_snm.txt', stock_snm_list_uq)
@@ -67,6 +68,7 @@ def generateDataset(type):
 
     elif type == "azure":
 
+        df4 = df
         up_sign = "up"
         down_sign = "down"
         stay_sign = "stay"
@@ -100,8 +102,8 @@ def generateDataset(type):
     print ("undersampling ...")
 
     # stayのデータをアンダーサンプリングする
-    df_buy_stay_sampled = df_buy_stay.sample(n=220, replace=True)
-    df_sell_stay_sampled = df_sell_stay.sample(n=220, replace=True)
+    df_buy_stay_sampled = df_buy_stay.sample(n=500, replace=True)
+    df_sell_stay_sampled = df_sell_stay.sample(n=500, replace=True)
 
     ### merge datasets
     df_buy = pd.concat([df_buy_up, df_buy_down, df_buy_stay_sampled])
