@@ -56,16 +56,6 @@ def generateDataset(type):
         outfile_buy = 'dataset_buy_tensorflow.csv'
         outfile_sell = 'dataset_sell_tensorflow.csv'
 
-        # # 買借レート変動ごとdataframeを分割する
-        # df_buy_up = df4.query("fluctuation_buy_rate == 0")
-        # df_buy_down = df4.query("fluctuation_buy_rate == 1")
-        # df_buy_stay = df4.query("fluctuation_buy_rate == 2")
-
-        # # 売貸レート変動ごとdataframeを分割する
-        # df_sell_up = df4.query("fluctuation_sell_rate == 0")
-        # df_sell_down = df4.query("fluctuation_sell_rate == 1")
-        # df_sell_stay = df4.query("fluctuation_sell_rate == 2")
-
     elif type == "azure":
 
         df4 = df

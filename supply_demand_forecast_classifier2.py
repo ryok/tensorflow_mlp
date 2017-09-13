@@ -93,9 +93,14 @@ x_data = tf.placeholder(shape=[None, 27], dtype=tf.float32)
 y_target = tf.placeholder(shape=[None, 3], dtype=tf.float32)
 
 
-### 変数の定義を作成 / Create variable definition
-def init_variable(shape):
-    return(tf.Variable(tf.random_normal(shape=shape)))
+# Define Variable Functions (weights and bias)
+def init_weight(shape, st_dev):
+    weight = tf.Variable(tf.random_normal(shape, stddev=st_dev))
+    return(weight)
+    
+def init_bias(shape, st_dev):
+    bias = tf.Variable(tf.random_normal(shape, stddev=st_dev))
+    return(bias)
 
 
 ### ロジスティック層の定義を作成 / Create a logistic layer definition
@@ -107,29 +112,52 @@ def logistic(input_layer, multiplication_weight, bias_weight, activation = True)
         return(tf.nn.sigmoid(linear_layer))
     else:
         return(linear_layer)
-        # return(tf.nn.softmax(linear_layer))
-        
 
-### １つ目のロジスティック層（２７個の入力　to 60個の隠れノード）
-A1 = init_variable(shape=[27,60])
-b1 = init_variable(shape=[60])
-logistic_layer1 = logistic(x_data, A1, b1)
+# Create a fully connected layer:
+def fully_connected(input_layer, weights, biases):
+    layer = tf.add(tf.matmul(input_layer, weights), biases)
+    return(tf.nn.relu(layer))        
 
-# A2 = init_variable(shape=[60, 60])
-# b2 = init_variable(shape=[60])
-# logistic_layer2 = logistic(logistic_layer1, A2, b2)
+def final_out(input_layer, weights, biases):
+    layer = tf.add(tf.matmul(input_layer, weights), biases)
+    # return(tf.nn.softmax(layer))
+    return layer
 
-# A4 = init_variable(shape=[60, 60])
-# b4 = init_variable(shape=[60])
-# logistic_layer3 = logistic(logistic_layer2, A4, b4)
 
-### 最後の出力層（60個の隠れノード to ３つの出力）
-A3 = init_variable(shape=[60,3])
-b3 = init_variable(shape=[3])
-final_output = logistic(logistic_layer1, A3, b3, activation=False)
+#--------Create the first layer (50 hidden nodes)--------
+weight_1 = init_weight(shape=[27, 60], st_dev=10.0)
+bias_1 = init_bias(shape=[60], st_dev=10.0)
+layer_1 = fully_connected(x_data, weight_1, bias_1)
 
+#--------Create second layer (25 hidden nodes)--------
+# weight_2 = init_weight(shape=[25, 10], st_dev=10.0)
+# bias_2 = init_bias(shape=[10], st_dev=10.0)
+# layer_2 = fully_connected(layer_1, weight_2, bias_2)
+
+
+# #--------Create third layer (5 hidden nodes)--------
+# weight_3 = init_weight(shape=[10, 3], st_dev=10.0)
+# bias_3 = init_bias(shape=[3], st_dev=10.0)
+# layer_3 = fully_connected(layer_2, weight_3, bias_3)
+
+
+#--------Create output layer (1 output value)--------
+weight_4 = init_weight(shape=[60, 3], st_dev=10.0)
+bias_4 = init_bias(shape=[3], st_dev=10.0)
+# final_output = fully_connected(layer_1, weight_4, bias_4)
+final_output = final_out(layer_1, weight_4, bias_4)
+
+# Declare loss function (L1)
+# cross_entropy = -tf.reduce_sum(y_target*tf.log(final_output), name='xentropy')
+cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_target, logits=final_output))
+# cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_target, logits=final_output)
+# Regularization terms (weight decay)
+L2_sqr = (tf.nn.l2_loss(weight_1) + tf.nn.l2_loss(weight_4))
+lambda_2 = 0.01
+loss = cross_entropy
+# loss = tf.reduce_mean(tf.abs(y_target - final_output))
 ### 損失関数を作成 / Declare loss function (Cross Entropy loss)
-loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=final_output, labels=y_target))
+# loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=final_output, labels=y_target))
 # cross_entropy = -tf.reduce_sum(y_target*tf.log(final_output))
 ### 正則化 / Regularization terms (weight decay)  
 # L2_sqr = tf.nn.l2_loss(A1) + tf.nn.l2_loss(A3)
@@ -139,7 +167,7 @@ loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=final_outpu
 ### 最適化関数を作成 / Declare optimizer
 # learning_rate = 0.001
 # learning_rate = 0.01
-learning_rate = 0.3
+learning_rate = 0.1
 my_opt = tf.train.AdamOptimizer(learning_rate)
 # my_opt = tf.train.GradientDescentOptimizer(learning_rate)
 # my_opt = tf.train.AdagradOptimizer(learning_rate)
