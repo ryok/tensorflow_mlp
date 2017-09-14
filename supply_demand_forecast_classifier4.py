@@ -156,9 +156,9 @@ bias_1 = tf.Variable(tf.random_normal(shape=[60]))
 layer_1 = logistic(x_data, weight_1, bias_1)
 
 #--------Create second layer (25 hidden nodes)--------
-weight_2 = tf.Variable(tf.random_normal([60,60],mean=0.0,stddev=0.05))
-bias_2 = tf.Variable(tf.random_normal(shape=[60]))
-layer_2 = logistic(layer_1, weight_2, bias_2)
+# weight_2 = tf.Variable(tf.random_normal([60,60],mean=0.0,stddev=0.05))
+# bias_2 = tf.Variable(tf.random_normal(shape=[60]))
+# layer_2 = logistic(layer_1, weight_2, bias_2)
 
 # #--------Create third layer (5 hidden nodes)--------
 # weight_3 = tf.Variable(tf.random_normal([60,60],mean=0.0,stddev=0.05))
@@ -174,7 +174,7 @@ weight_4 = tf.Variable(tf.random_normal([60,3],mean=0.0,stddev=0.05))
 bias_4 = tf.Variable(tf.random_normal(shape=[3]))
 # final_output = fully_connected(layer_1, weight_4, bias_4)
 # final_output = final_out(layer_1, weight_4, bias_4)
-final_output = logistic(layer_2, weight_4, bias_4, activation=False)
+final_output = logistic(layer_1, weight_4, bias_4, activation=False)
 
 ### 損失関数を作成 / Declare loss function (Cross Entropy loss)
 # cross_entropy = -tf.reduce_sum(y_target*tf.log(final_output))
@@ -233,6 +233,7 @@ sess.run(init)
 ### Training loop
 ### 損失ベクトルと正解ベクトルを初期化
 loss_vec = []
+test_loss_vec = []
 train_acc = []
 test_acc = []
 for i in range(3000):
@@ -260,6 +261,10 @@ for i in range(3000):
     temp_acc_test = sess.run(accuracy, feed_dict={x_data: x_vals_test, y_target: y_vals_test})
     test_acc.append(temp_acc_test)
 
+    ### テストセットの損失関数
+    temp_loss_test = sess.run(loss, feed_dict={x_data: x_vals_test, y_target: y_vals_test})
+    test_loss_vec.append(temp_loss_test)
+
     if (i+1)%150==0:
         # train_accuracy = sess.run(temp_acc_train.eval, feed_dict={x_data: x_vals_train, y_target: y_vals_train})
         # print(' step, accurary = %6d: %8.3f' % (i, train_accuracy))
@@ -267,10 +272,11 @@ for i in range(3000):
         print("step %d, training accuracy %g"%(i, temp_acc_train))
         print("step %d, test accuracy %g"%(i, temp_acc_test))
         print('Loss = ' + str(temp_loss))
+        print('Test Loss = ' + str(temp_loss_test))
 
 
 # Test trained model
-print('accuracy = ', sess.run(accuracy, feed_dict={x_data: x_vals_test, y_target: y_vals_test}))
+# print('accuracy = ', sess.run(accuracy, feed_dict={x_data: x_vals_test, y_target: y_vals_test}))
 
 # precision recall
 # print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
@@ -397,6 +403,13 @@ print(classification_report(ac, pr))
 
 ### 損失値をプロット / Plot loss over time
 plt.plot(loss_vec, 'k-')
+plt.title('Cross Entropy Loss per Generation')
+plt.xlabel('Generation')
+plt.ylabel('Cross Entropy Loss')
+plt.show()
+
+### 損失値をプロット / Plot loss over time
+plt.plot(test_loss_vec, 'k-')
 plt.title('Cross Entropy Loss per Generation')
 plt.xlabel('Generation')
 plt.ylabel('Cross Entropy Loss')
