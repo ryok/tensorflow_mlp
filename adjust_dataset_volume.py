@@ -4,7 +4,7 @@ import pandas as pd
 import collections as cl
 import sys
 
-sampling_count = 300
+sampling_count = 350
 outfile_buy = 'dataset_buy_tensorflow' + str(sampling_count) + '.csv'
 outfile_sell = 'dataset_sell_tensorflow' + str(sampling_count) + '.csv'
 
