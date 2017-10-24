@@ -12,13 +12,32 @@ from sklearn.metrics import classification_report
 # import seaborn as sns
 
 
+# prediction_type = 'buy'
+prediction_type = 'sell'
+# lambda_2 = 0.0006
+lambda_2 = 0.00001
+# learning_rate = 0.001
+# learning_rate = 0.01
+# learning_rate = 0.087
+learning_rate = 0.07
+
+
+if prediction_type == 'buy':
+    read_file = 'tmp_20170911/dataset_buy_tensorflow.csv'
+    # read_file = 'tmp_20170911/dataset_buy_tensorflow350.csv'
+    supervised_label = 'fluctuation_buy_rate'
+elif prediction_type == 'sell':
+    read_file = 'tmp_20170911/dataset_sell_tensorflow.csv'
+    # read_file = 'tmp_20170911/dataset_sell_tensorflow200.csv'
+    supervised_label = 'fluctuation_sell_rate'
+else:
+    print('prediction type error...')
+    exit()
+
+
 ### reset computational graph
 ops.reset_default_graph()
 
-# read_file = 'tmp_20170911/dataset_buy_tensorflow.csv'
-read_file = 'tmp_20170911/dataset_sell_tensorflow.csv'
-# supervised_label = 'fluctuation_buy_rate'
-supervised_label = 'fluctuation_sell_rate'
 
 if not os.path.exists(read_file):
     print ('can not find csv file...')
@@ -60,6 +79,7 @@ tf.set_random_seed(seed)
 
 # Declare batch size
 batch_size = 90
+# batch_size = 1000
 # batch_size = 120
 
 
@@ -93,9 +113,17 @@ x_data = tf.placeholder(shape=[None, 27], dtype=tf.float32)
 y_target = tf.placeholder(shape=[None, 3], dtype=tf.float32)
 
 
-### 変数の定義を作成 / Create variable definition
 def init_variable(shape):
     return(tf.Variable(tf.random_normal(shape=shape)))
+
+# Define Variable Functions (weights and bias)
+def init_weight(shape, st_dev):
+    weight = tf.Variable(tf.random_normal(shape, stddev=st_dev))
+    return(weight)
+    
+def init_bias(shape, st_dev):
+    bias = tf.Variable(tf.random_normal(shape, stddev=st_dev))
+    return(bias)
 
 
 ### ロジスティック層の定義を作成 / Create a logistic layer definition
@@ -105,71 +133,90 @@ def logistic(input_layer, multiplication_weight, bias_weight, activation = True)
     # implement the last sigmoid necessary
     if activation:
         return(tf.nn.sigmoid(linear_layer))
+        # return(tf.nn.relu(linear_layer))
     else:
         return(linear_layer)
         # return(tf.nn.softmax(linear_layer))
-        
 
-### １つ目のロジスティック層（２７個の入力　to 60個の隠れノード）
-A1 = init_variable(shape=[27,60])
-b1 = init_variable(shape=[60])
-logistic_layer1 = logistic(x_data, A1, b1)
+# Create a fully connected layer:
+# def fully_connected(input_layer, weights, biases):
+#     layer = tf.add(tf.matmul(input_layer, weights), biases)
+#     return(tf.nn.relu(layer))        
 
-# A2 = init_variable(shape=[60, 60])
-# b2 = init_variable(shape=[60])
-# logistic_layer2 = logistic(logistic_layer1, A2, b2)
+# def final_out(input_layer, weights, biases):
+#     layer = tf.add(tf.matmul(input_layer, weights), biases)
+#     # return(tf.nn.softmax(layer))
+#     return layer
 
-# A4 = init_variable(shape=[60, 60])
-# b4 = init_variable(shape=[60])
-# logistic_layer3 = logistic(logistic_layer2, A4, b4)
 
-### 最後の出力層（60個の隠れノード to ３つの出力）
-A3 = init_variable(shape=[60,3])
-b3 = init_variable(shape=[3])
-final_output = logistic(logistic_layer1, A3, b3, activation=False)
+#--------Create the first layer (50 hidden nodes)--------
+weight_1 = tf.Variable(tf.random_normal([27,60],mean=0.0,stddev=0.05))
+# weight_1 = tf.Variable(tf.random_normal(shape=[27,60]))
+bias_1 = tf.Variable(tf.random_normal(shape=[60]))
+# bias_1 = tf.Variable(tf.zeros([60]))
+# layer_1 = fully_connected(x_data, weight_1, bias_1)
+layer_1 = logistic(x_data, weight_1, bias_1)
+
+#--------Create second layer (25 hidden nodes)--------
+weight_2 = tf.Variable(tf.random_normal([60,60],mean=0.0,stddev=0.05))
+bias_2 = tf.Variable(tf.random_normal(shape=[60]))
+layer_2 = logistic(layer_1, weight_2, bias_2)
+
+# #--------Create third layer (5 hidden nodes)--------
+# weight_3 = tf.Variable(tf.random_normal([60,60],mean=0.0,stddev=0.05))
+# bias_3 = tf.Variable(tf.random_normal(shape=[60]))
+# layer_3 = logistic(layer_2, weight_3, bias_3)
+
+#--------Create output layer (1 output value)--------
+weight_4 = tf.Variable(tf.random_normal([60,3],mean=0.0,stddev=0.05))
+# weight_4 = tf.Variable(tf.random_normal(shape=[60,3]))
+bias_4 = tf.Variable(tf.random_normal(shape=[3]))
+# bias_4 = tf.Variable(tf.zeros([3]))
+final_output = logistic(layer_2, weight_4, bias_4, activation=False)
 
 ### 損失関数を作成 / Declare loss function (Cross Entropy loss)
-loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=final_output, labels=y_target))
 # cross_entropy = -tf.reduce_sum(y_target*tf.log(final_output))
-### 正則化 / Regularization terms (weight decay)  
-# L2_sqr = tf.nn.l2_loss(A1) + tf.nn.l2_loss(A3)
-# lambda_2 = 0.01
-# loss = cross_entropy + lambda_2 * L2_sqr
+cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_target, logits=final_output))
+# loss = tf.reduce_mean(tf.abs(y_target - final_output))
+# loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=final_output, labels=y_target))
+### 正則化 / Regularization terms (weight decay)
+L2_sqr = tf.nn.l2_loss(weight_1) + tf.nn.l2_loss(bias_1) + tf.nn.l2_loss(weight_2) + tf.nn.l2_loss(bias_2) + tf.nn.l2_loss(weight_4) + tf.nn.l2_loss(bias_4)
+# lambda_2 = 0.0007
+loss = cross_entropy + lambda_2 * L2_sqr
+# loss = cross_entropy
+
 
 ### 最適化関数を作成 / Declare optimizer
-# learning_rate = 0.001
-# learning_rate = 0.01
-learning_rate = 0.3
 my_opt = tf.train.AdamOptimizer(learning_rate)
 # my_opt = tf.train.GradientDescentOptimizer(learning_rate)
 # my_opt = tf.train.AdagradOptimizer(learning_rate)
 # my_opt = tf.train.AdadeltaOptimizer(learning_rate)
 # my_opt = tf.train.RMSPropOptimizer(learning_rate)
-# my_opt = tf.train.MomentumOptimizer(learning_rate,0.001)
+# my_opt = tf.train.MomentumOptimizer(learning_rate, 0)
 train_step = my_opt.minimize(loss)
 
 
 ### Actual Prediction
-prediction = tf.round(tf.nn.sigmoid(final_output))
-# correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
-# accuracy = tf.reduce_mean(correct_prediction)
-
+# prediction = tf.round(final_output)
 with tf.name_scope("test") as scope:
-    correct_prediction = tf.cast(tf.equal(tf.argmax(prediction, 1), tf.argmax(y_target, 1)), tf.float32 )
+    correct_prediction = tf.cast(tf.equal(tf.argmax(final_output, 1), tf.argmax(y_target, 1)), tf.float32 )
     # correct_prediction = tf.cast(tf.equal(prediction, y_target), tf.float32)
     accuracy = tf.reduce_mean(correct_prediction)
     accuracy_summary = tf.summary.scalar("accuracy", accuracy)
     # matrix = tf.confusion_matrix(y_target, prediction)
 
+
+### tensor board
 summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter('log', graph = sess.graph)
 
 
-predictions = tf.argmax(prediction, 1)
+### confusion matrix
+predictions = tf.argmax(final_output, 1)
+# predictions = tf.argmax(prediction, 1)
 actuals = tf.argmax(y_target, 1)
-tf_recall = tf.metrics.recall(actuals, predictions)
+# tf_recall = tf.metrics.recall(actuals, predictions)
 confmat = tf.confusion_matrix(actuals, predictions)
-# cl_report = classification_report(actuals, predictions)
 
 
 ### 変数を初期化 / Initialize variables
@@ -180,15 +227,14 @@ sess.run(init)
 ### Training loop
 ### 損失ベクトルと正解ベクトルを初期化
 loss_vec = []
+test_loss_vec = []
 train_acc = []
 test_acc = []
 for i in range(3000):
     ### バッチを選択するためのインデックスをランダムに選択
     rand_index = np.random.choice(len(x_vals_train), size=batch_size)
-    # rand_index = np.random.choice(batch_size, batch_size)
     ### ランダムな値でバッチを取得
     rand_x = x_vals_train[rand_index]
-    # rand_y = np.transpose([y_vals_train[rand_index]])
     rand_y = y_vals_train[rand_index]
 
     ### トレーニングステップを実行
@@ -209,89 +255,16 @@ for i in range(3000):
     temp_acc_test = sess.run(accuracy, feed_dict={x_data: x_vals_test, y_target: y_vals_test})
     test_acc.append(temp_acc_test)
 
+    ### テストセットの損失関数
+    temp_loss_test = sess.run(loss, feed_dict={x_data: x_vals_test, y_target: y_vals_test})
+    test_loss_vec.append(temp_loss_test)
+
     if (i+1)%150==0:
         print("step %d, training accuracy %g"%(i, temp_acc_train))
         print("step %d, test accuracy %g"%(i, temp_acc_test))
         print('Loss = ' + str(temp_loss))
-        
+        print('Test Loss = ' + str(temp_loss_test))
 
-# precision recall
-# print('Precision: %.3f' % precision_score(tf.argmax(y_target, 1), tf.argmax(prediction, 1)))
-# print('Precision: %.3f' % precision_score(y_vals, prediction))
-
-
-'''与えられたネットワークの正解率などを出力する。
-'''
-'''
-ones_like_actuals = tf.ones_like(actuals)
-zeros_like_actuals = tf.zeros_like(actuals)
-ones_like_predictions = tf.ones_like(predictions)
-zeros_like_predictions = tf.zeros_like(predictions)
-
-tp_op = tf.reduce_sum(
-    tf.cast(
-        tf.logical_and(
-            tf.equal(actuals, ones_like_actuals),
-            tf.equal(predictions, ones_like_predictions)
-        ),
-        "float"
-    )
-)
-
-tn_op = tf.reduce_sum(
-    tf.cast(
-        tf.logical_and(
-            tf.equal(actuals, zeros_like_actuals),
-            tf.equal(predictions, zeros_like_predictions)
-        ),
-        "float"
-    )
-)
-
-fp_op = tf.reduce_sum(
-    tf.cast(
-        tf.logical_and(
-            tf.equal(actuals, zeros_like_actuals),
-            tf.equal(predictions, ones_like_predictions)
-        ),
-        "float"
-    )
-)
-
-fn_op = tf.reduce_sum(
-    tf.cast(
-        tf.logical_and(
-            tf.equal(actuals, ones_like_actuals),
-            tf.equal(predictions, zeros_like_predictions)
-        ),
-        "float"
-    )
-)
-
-tp, tn, fp, fn = sess.run(
-    [tp_op, tn_op, fp_op, fn_op],
-    feed_dict={x_data: x_vals_test, y_target: y_vals_test}
-)
-
-tpr = float(tp)/(float(tp) + float(fn))
-fpr = float(fp)/(float(tp) + float(fn))
-
-accuracy = (float(tp) + float(tn))/(float(tp) + float(fp) + float(fn) + float(tn))
-
-recall = tpr
-if (float(tp) + float(fp)):
-    precision = float(tp)/(float(tp) + float(fp))
-    f1_score = (2 * (precision * recall)) / (precision + recall)
-else:
-    precision = 0
-    f1_score = 0
-
-print('-----')
-print('Precision = ', precision)
-print('Recall = ', recall)
-print('F1 Score = ', f1_score)
-print('Accuracy = ', accuracy)
-'''
 
 ### 混合行列 / confusion matrix の表示
 print('-----')
@@ -312,7 +285,6 @@ ac = sess.run(
 pr = sess.run(
     predictions,
     feed_dict={x_data: x_vals_test, y_target: y_vals_test})
-
 print(classification_report(ac, pr))
 
 
@@ -342,6 +314,13 @@ print(classification_report(ac, pr))
 ### 損失値をプロット / Plot loss over time
 plt.plot(loss_vec, 'k-')
 plt.title('Cross Entropy Loss per Generation')
+plt.xlabel('Generation')
+plt.ylabel('Cross Entropy Loss')
+plt.show()
+
+### 損失値をプロット / Plot loss over time
+plt.plot(test_loss_vec, 'k-')
+plt.title('Cross Entropy Loss per Generation (Test)')
 plt.xlabel('Generation')
 plt.ylabel('Cross Entropy Loss')
 plt.show()
